@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useStudio } from '../../context/StudioContext';
+import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../context/TranslationContext';
 import { ServicesShowcase } from './ServicesShowcase';
 import { EnquiryBookingWizard } from './EnquiryBookingWizard';
 import { CustomerOrderTracker } from './CustomerOrderTracker';
 import { PoliciesModal } from './PoliciesModal';
 import { BoutiqueChatbot } from './BoutiqueChatbot';
+import { OwnerAuthGateModal } from '../common/OwnerAuthGateModal';
 import { ServiceDefinition } from '../../types';
 import {
   Calendar,
@@ -17,19 +19,38 @@ import {
   PackageCheck,
   ArrowRight,
   MessageCircle,
+  Lock,
 } from 'lucide-react';
 
 export const CustomerPortal: React.FC = () => {
-  const { settings, services, setCurrentView } = useStudio();
+  const { settings, services, setCurrentView, isOwnerAuthenticated, setIsOwnerAuthenticated } = useStudio();
+  const { isAdmin } = useAuth();
   const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<'services' | 'tracker' | 'booking'>('services');
   const [selectedService, setSelectedService] = useState<ServiceDefinition | null>(null);
   const [isPoliciesOpen, setIsPoliciesOpen] = useState<boolean>(false);
+  const [isOwnerGateOpen, setIsOwnerGateOpen] = useState<boolean>(false);
+
+  const isOwner = isAdmin || isOwnerAuthenticated;
 
   const handleStartBooking = (service?: ServiceDefinition) => {
     if (service) setSelectedService(service);
     setActiveTab('booking');
+  };
+
+  const handleOwnerAccessRequest = () => {
+    if (isOwner) {
+      setCurrentView('admin');
+    } else {
+      setIsOwnerGateOpen(true);
+    }
+  };
+
+  const handleAuthSuccess = () => {
+    setIsOwnerAuthenticated(true);
+    setIsOwnerGateOpen(false);
+    setCurrentView('admin');
   };
 
   const handleSelectServiceFromChat = (serviceCategoryName: string) => {
@@ -203,14 +224,22 @@ export const CustomerPortal: React.FC = () => {
             </button>
             <span>·</span>
             <button
-              onClick={() => setCurrentView('admin')}
-              className="text-[#9E616B] font-medium hover:underline cursor-pointer"
+              onClick={handleOwnerAccessRequest}
+              className="text-[#9E616B] font-medium hover:underline cursor-pointer flex items-center gap-1.5"
             >
-              Switch to Owner Atelier Dashboard →
+              <Lock className="w-3.5 h-3.5" />
+              <span>Owner Atelier Access →</span>
             </button>
           </div>
         </div>
       </footer>
+
+      {/* Owner Authentication Gate Modal */}
+      <OwnerAuthGateModal
+        isOpen={isOwnerGateOpen}
+        onClose={() => setIsOwnerGateOpen(false)}
+        onSuccess={handleAuthSuccess}
+      />
     </div>
   );
 };

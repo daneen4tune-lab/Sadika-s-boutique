@@ -46,12 +46,15 @@ interface StudioContextType {
   currentView: 'customer' | 'admin';
   activeAdminTab: string;
   isAuthorizedUser: boolean; // For measurements gate
+  isOwnerAuthenticated: boolean; // Protects Sadika's Atelier from customer access
   isFirestoreLive: boolean; // Indicates real-time cloud connection status
 
   // Navigation & UI controls
   setCurrentView: (view: 'customer' | 'admin') => void;
   setActiveAdminTab: (tab: string) => void;
   setIsAuthorizedUser: (val: boolean) => void;
+  setIsOwnerAuthenticated: (val: boolean) => void;
+  logoutOwner: () => void;
 
   // Business Settings
   updateSettings: (newSettings: Partial<BusinessSettings>) => void;
@@ -165,6 +168,21 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [activeAdminTab, setActiveAdminTab] = useState<string>('overview');
   const [isAuthorizedUser, setIsAuthorizedUser] = useState<boolean>(true);
   const [isFirestoreLive, setIsFirestoreLive] = useState<boolean>(false);
+  const [isOwnerAuthenticated, setIsOwnerAuthenticated] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('sadika_owner_passcode_auth') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const logoutOwner = () => {
+    try {
+      localStorage.removeItem('sadika_owner_passcode_auth');
+    } catch {}
+    setIsOwnerAuthenticated(false);
+    setCurrentView('customer');
+  };
 
   // Real-time Firestore sync & seed
   useEffect(() => {
@@ -1011,10 +1029,13 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         currentView,
         activeAdminTab,
         isAuthorizedUser,
+        isOwnerAuthenticated,
         isFirestoreLive,
         setCurrentView,
         setActiveAdminTab,
         setIsAuthorizedUser,
+        setIsOwnerAuthenticated,
+        logoutOwner,
         updateSettings,
         addCustomer,
         updateCustomer,

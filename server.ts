@@ -222,39 +222,55 @@ app.get('/api/health', (req, res) => {
 });
 
 // Endpoint for AI-powered Chatbot Concierge
+// Endpoint for AI-powered Chatbot Concierge ("Iris") grounded in Knowledge Base
 app.post('/api/chat-concierge', async (req, res) => {
   try {
-    const { message, conversationHistory = [], language = 'en' } = req.body;
+    const { message, conversationHistory = [], language = 'en', knowledgeContext = '' } = req.body;
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    const systemPrompt = `You are the AI Concierge and Couture Stylist for "Sadika's Bridal Boutique" in Cape Town, owned and personally run by master dressmaker Sadika Karbary.
-Your purpose is to warmly assist customers who aren't sure which service they need, give style & fabric advice, and explain studio booking rules.
+    const systemPrompt = `You are "Iris", the bespoke Atelier AI Stylist and Couture Concierge for "Sadika's Bridal Boutique" in Cape Town, founded and personally run by master dressmaker Sadika Karbary.
+Your name is Iris. Introduce yourself as Iris when appropriate.
+You must be strictly grounded in the following official Atelier Knowledge Base:
 
-The Boutique's 5 Core Services:
-1. Bridal Wear: Custom wedding dresses (corsetry, illusion lace, mikado silk), cathedral veils, bridesmaids dresses, mother of the bride/groom, flower girls. Lead time: 3 to 6 months.
-2. Matric Dance Couture: Show-stopping matric ball & prom gowns (structured boning, cowl drapes, high leg splits, puddle trains). Lead time: 2 to 3 months (minimum 8 weeks).
-3. Festive & Traditional Occasion Wear: Modest silk kurti sets, abayas, Eid outfits, Christmas celebration attire, traditional cultural wear. Lead time: 6 to 8 weeks.
-4. Evening & Gala Wear: Black-tie floor length gowns, cocktail dresses, velvet/silk evening wear. Lead time: 6 to 8 weeks.
-5. Fine Alterations & Repairs: Expert resizing, hem adjustments, taking in/letting out, neckline redesign, zipper repairs. Lead time: 1 to 2 weeks.
+=== ATELIER KNOWLEDGE BASE ===
+1. Boutique Identity & Master Dressmaker:
+   - Name: Sadika's Bridal Boutique.
+   - Master Dressmaker & Owner: Sadika Karbary (over 25 years of bespoke dressmaking and haute couture experience).
+   - Location: 14 Jasmine Close, Rondebosch / Claremont, Cape Town. Private residential garden atelier.
+   - 98% of clients are loyal, recurring generational families.
 
-Critical Studio Rules from Sadika Karbary:
-- Recommended booking lead time: Ideally 2 to 3 months in advance, especially during December peak rush and Matric season (Sept-Nov).
-- Operating Hours: Strictly Monday to Friday (09:00 to 17:00). Strictly closed on Saturdays and Sundays. Emphasize that although the atelier is home-based in Rondebosch/Claremont, walk-ins and after-hours/weekend visits are never accommodated.
-- Booking Confirmation: A booking is officially confirmed on Sadika's cutting calendar ONLY once the client's fabric is physically received at the atelier.
-- Respond in the language requested (language code: ${language}). Keep answers concise (2-4 sentences or short bullet points), warm, boutique-chic, and encouraging.
-- At the end of your response, when relevant, clearly recommend which of the 5 services they should book.`;
+2. Five Core Atelier Services & Starting Investments:
+   - 1. Bridal Wear: Custom bridal gowns, veil lengths (Cathedral 300cm, Chapel 250cm, Fingertip 100cm, Birdcage), bridesmaids, mother of the bride/groom, flower girls. Silhouettes: A-Line, Dramatic Ballgown, Mermaid, Column Sheath. Fabrics: Silk Mikado, Duchess Satin, French Chantilly/Alençon Lace, Italian Silk Crepe, English Tulle. Lead time: 3 to 6 months. Starting from R6,500.
+   - 2. Matric Dance Couture: Red-carpet corseted gowns, structured boning, deep cowl necklines, high leg splits, dramatic backless silhouettes, puddle trains. Fabrics: Heavy stretch satin, shimmer metallic lurex, Duchess satin. Lead time: 2 to 3 months (minimum 8 weeks). Starting from R3,800.
+   - 3. Festive & Traditional Occasion Wear: Modest Eid ensembles, flared pure silk kurtis, palazzo suits, embroidered raw silk abayas with pearl beadwork, Christmas celebration attire, cultural garments. Lead time: 6 to 8 weeks. Starting from R2,400.
+   - 4. Haute Evening & Gala Wear: Black-tie floor length gowns, cocktail dresses, velvet/silk evening wear. Lead time: 6 to 8 weeks. Starting from R3,200.
+   - 5. Fine Alterations & Repairs: Expert resizing, hem adjustments (baby hems, horsehair braids), taking in/letting out, neckline redesign, zipper repairs. Lead time: 1 to 2 weeks. Starting from R250.
+
+3. Inflexible Atelier Rules & Invariants:
+   - Operating Hours: Strictly Monday to Friday (09:00 to 17:00). Strictly CLOSED on Saturdays and Sundays. Emphasize that because the atelier is located at a private residence, walk-in visits and weekend/evening visits are strictly prohibited. All visits are strictly by scheduled weekday appointment.
+   - Booking Confirmation Rule: A booking is ONLY officially confirmed and locked on Sadika's cutting calendar once the client's fabric has been physically received at the atelier. Fabric receipt acts as the project commitment.
+   - Lead Times: Standard 2–3 months ahead (8–12 weeks). For peak season (October-December for Matric Ball season, festive Eid/Christmas, and summer weddings), clients must book 3–4 months ahead.
+   - Fitting Etiquette: Punctuality is required (slots are 45 minutes; 15-minute grace period applies, beyond which appointments must be rescheduled). Maximum 1 accompanying guest. Clients must bring their intended heel height shoes and seamless undergarments.
+   - Financial Terms: 50% deposit required upon booking/fabric receipt; remaining 50% due at final fitting prior to collection. EFT banking details: FNB, Branch 250655.
+${knowledgeContext ? `\n=== ADDITIONAL RETRIEVED GROUNDING ===\n${knowledgeContext}\n` : ''}
+
+Behavior Instructions:
+- Always speak with an elegant, warm, boutique-chic aesthetic, embodying Iris the Atelier Stylist.
+- Respond in the language requested (language code: ${language}). Keep answers concise (2-4 clear sentences or short bullet points), helpful, and grounded in the rules above.
+- Never invent business hours or policies that contradict the knowledge base.
+- Conclude your reply with a clear recommendation on which of the 5 services they should book.`;
 
     if (ai && process.env.GEMINI_API_KEY) {
       try {
         const historyText = conversationHistory
           .slice(-6)
-          .map((m: any) => `${m.role === 'user' ? 'Client' : 'Concierge'}: ${m.text}`)
+          .map((m: any) => `${m.role === 'user' ? 'Client' : 'Iris'}: ${m.text}`)
           .join('\n');
 
-        const prompt = `${historyText ? historyText + '\n' : ''}Client: ${message}\nConcierge:`;
+        const prompt = `${historyText ? historyText + '\n' : ''}Client: ${message}\nIris:`;
 
         const response = await ai.models.generateContent({
           model: 'gemini-3.8-flash',
@@ -272,35 +288,35 @@ Critical Studio Rules from Sadika Karbary:
           });
         }
       } catch (geminiError: any) {
-        console.warn('Gemini chat error, falling back to smart concierge:', geminiError?.message);
+        console.warn('Gemini Iris chat error, falling back to grounded concierge:', geminiError?.message);
       }
     }
 
-    // Heuristic Fallback
+    // Grounded Fallback Engine for Iris
     const lower = message.toLowerCase();
-    let reply = `Welcome to Sadika's Bridal Boutique! Sadika Karbary specialises in bespoke bridal gowns, matric dance couture, occasion wear (such as Eid and festive outfits), evening wear, and fine alterations. Could you share what event or function date you are planning for? Remember, we recommend booking 2–3 months ahead!`;
+    let reply = `Hello! I'm Iris, your Atelier AI Stylist at Sadika's Bridal Boutique. Sadika Karbary specialises in bespoke bridal gowns, matric dance couture, festive & Eid occasion wear, evening wear, and fine alterations in Rondebosch, Cape Town. Could you tell me about your event date and what silhouette you have in mind? Please note we recommend booking 2–3 months ahead!`;
     let recommendedService = 'Bespoke Consultation';
 
     if (lower.includes('wedding') || lower.includes('bride') || lower.includes('veil')) {
-      reply = `Congratulations on your upcoming wedding! Sadika Karbary creates custom bridal gowns, cathedral veils, bridesmaids dresses, and mother-of-the-bride ensembles. For bridal wear, our recommended lead time is 3 to 6 months. Would you like to check available weekday consultation slots?`;
+      reply = `Hello! I'm Iris. For your wedding, Sadika Karbary designs bespoke bridal gowns (A-line, mermaid, ballgown, or sleek sheath) with custom internal corsetry and handcrafted veils (cathedral, chapel, or fingertip). Bridal wear starts from R6,500 and requires 3 to 6 months lead time. Would you like to book a weekday consultation?`;
       recommendedService = 'Bridal Wear';
     } else if (lower.includes('matric') || lower.includes('prom') || lower.includes('ball')) {
-      reply = `How exciting! For matric balls, Sadika creates structured corseted gowns, cowl draping, and glamorous red-carpet silhouettes. Matric season fills up quickly, so we require fabric at least 8 weeks prior (2–3 months lead time recommended). Would you like to submit an enquiry?`;
+      reply = `Hello! I'm Iris. For matric balls, Sadika crafts red-carpet corseted gowns with boning, cowl drapes, high leg splits, and puddle trains. Starting from R3,800 with an 8 to 12 week lead time (2–3 months). Since matric season fills fast, would you like to check weekday availability?`;
       recommendedService = 'Matric Dance';
     } else if (lower.includes('eid') || lower.includes('christmas') || lower.includes('traditional') || lower.includes('kurti')) {
-      reply = `For festive celebrations, Eid, and cultural occasions, Sadika creates exquisite modest silk kurti sets, abayas, and coordinated family occasion wear (typically 6–8 weeks lead time). Please drop off fabric early to guarantee your slot!`;
+      reply = `Hello! I'm Iris. For Eid, festive celebrations, and cultural events, Sadika designs modest pure silk flared kurtis, palazzo suits, and embroidered raw silk abayas with pearl detailing (starting from R2,400, 6–8 weeks lead time). Please drop off fabric early to guarantee your slot!`;
       recommendedService = 'Occasion Wear';
     } else if (lower.includes('alter') || lower.includes('hem') || lower.includes('zip') || lower.includes('shorten') || lower.includes('take in')) {
-      reply = `Sadika provides master alterations, resizing, and hem leveling (typically 1–2 weeks turnaround). Please remember to bring the exact shoes and undergarments you plan to wear to your fitting!`;
+      reply = `Hello! I'm Iris. Sadika provides master alterations, precision hem leveling, and garment resizing (1–2 weeks turnaround, from R250). Please remember you must bring the exact shoes and undergarments you plan to wear to your fitting!`;
       recommendedService = 'Alterations & Repairs';
     } else if (lower.includes('hour') || lower.includes('open') || lower.includes('weekend') || lower.includes('time')) {
-      reply = `Sadika's Bridal Boutique operates strictly Monday to Friday, 09:00 to 17:00, and is closed on Saturdays and Sundays. All fittings are strictly by appointment at our private home atelier in Rondebosch/Claremont.`;
+      reply = `Hello! I'm Iris. Sadika's Bridal Boutique operates strictly Monday to Friday, 09:00 to 17:00, and is strictly closed on Saturdays and Sundays. All fittings are strictly by appointment at our private home atelier in Rondebosch/Claremont.`;
     }
 
     return res.json({
       reply,
       recommendedService,
-      source: 'heuristic',
+      source: 'grounded-knowledge',
     });
   } catch (err: any) {
     console.error('Chat endpoint error:', err);
