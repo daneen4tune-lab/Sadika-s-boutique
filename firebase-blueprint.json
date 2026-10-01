@@ -1,0 +1,178 @@
+{
+  "entities": {
+    "Enquiry": {
+      "title": "Enquiry",
+      "description": "Bespoke dressmaking customer enquiry with AI extraction data",
+      "type": "object",
+      "properties": {
+        "customerName": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "email": { "type": "string", "maxLength": 100 },
+        "occasion": { "type": "string", "maxLength": 50 },
+        "eventDate": { "type": "string", "maxLength": 20 },
+        "serviceCategory": { "type": "string", "maxLength": 50 },
+        "garmentDescription": { "type": "string", "maxLength": 1500 },
+        "designPreferences": { "type": "string", "maxLength": 1000 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "preferredConsultationDate": { "type": "string", "maxLength": 20 },
+        "preferredTimeSlot": { "type": "string", "maxLength": 20 },
+        "status": { "type": "string", "enum": ["New", "Reviewed", "Accepted", "Archived"] },
+        "createdAt": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["customerName", "phone", "occasion", "eventDate", "serviceCategory", "garmentDescription", "status"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer profile with contact info, occasion, measurements, and preferences",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "email": { "type": "string", "maxLength": 100 },
+        "suburb": { "type": "string", "maxLength": 100 },
+        "occasion": { "type": "string", "maxLength": 50 },
+        "eventDate": { "type": "string", "maxLength": 20 },
+        "designPreferences": { "type": "string", "maxLength": 1000 },
+        "fabricSuppliedByCustomer": { "type": "boolean" },
+        "fabricDetails": { "type": "string", "maxLength": 500 },
+        "notes": { "type": "string", "maxLength": 2000 },
+        "isRecurring": { "type": "boolean" },
+        "previousOrdersCount": { "type": "number" },
+        "createdAt": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["name", "phone", "occasion", "eventDate"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Bespoke atelier garment order tracking across workflow stages",
+      "type": "object",
+      "properties": {
+        "orderNumber": { "type": "string", "maxLength": 40 },
+        "customerId": { "type": "string", "maxLength": 128 },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "customerPhone": { "type": "string", "maxLength": 30 },
+        "customerEmail": { "type": "string", "maxLength": 100 },
+        "serviceCategory": { "type": "string", "maxLength": 50 },
+        "garmentTitle": { "type": "string", "maxLength": 150 },
+        "occasion": { "type": "string", "maxLength": 50 },
+        "eventDate": { "type": "string", "maxLength": 20 },
+        "status": {
+          "type": "string",
+          "enum": [
+            "New Enquiry",
+            "Consultation",
+            "Booking Confirmed",
+            "Fabric Received",
+            "Fitting",
+            "In Production",
+            "Final Fitting",
+            "Completed"
+          ]
+        },
+        "fabricReceived": { "type": "boolean" },
+        "fabricReceivedDate": { "type": "string", "maxLength": 30 },
+        "fabricNotes": { "type": "string", "maxLength": 500 },
+        "designNotes": { "type": "string", "maxLength": 2000 },
+        "estimatedPrice": { "type": "number" },
+        "invoiceId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 40 },
+        "targetCompletionDate": { "type": "string", "maxLength": 30 }
+      },
+      "required": ["orderNumber", "customerId", "customerName", "serviceCategory", "garmentTitle", "eventDate", "status"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Consultation or fitting slot on the atelier calendar",
+      "type": "object",
+      "properties": {
+        "customerId": { "type": "string", "maxLength": 128 },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "customerPhone": { "type": "string", "maxLength": 30 },
+        "orderId": { "type": "string", "maxLength": 128 },
+        "type": {
+          "type": "string",
+          "enum": [
+            "Initial Consultation",
+            "Measurements & Fabric Drop-off",
+            "First Fitting (Toile / Baste)",
+            "Second Fitting",
+            "Final Fitting & Collection"
+          ]
+        },
+        "date": { "type": "string", "maxLength": 20 },
+        "time": { "type": "string", "maxLength": 10 },
+        "durationMinutes": { "type": "number" },
+        "status": {
+          "type": "string",
+          "enum": ["Requested", "Confirmed", "Completed", "Rescheduled", "Cancelled"]
+        },
+        "notes": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["customerName", "type", "date", "time", "status"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Boutique billing invoice for labor, notions, and fabric deposits",
+      "type": "object",
+      "properties": {
+        "invoiceNumber": { "type": "string", "maxLength": 40 },
+        "customerId": { "type": "string", "maxLength": 128 },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "customerEmail": { "type": "string", "maxLength": 100 },
+        "customerPhone": { "type": "string", "maxLength": 30 },
+        "orderId": { "type": "string", "maxLength": 128 },
+        "garmentTitle": { "type": "string", "maxLength": 150 },
+        "eventDate": { "type": "string", "maxLength": 20 },
+        "subtotal": { "type": "number" },
+        "depositRequired": { "type": "number" },
+        "depositPaid": { "type": "number" },
+        "total": { "type": "number" },
+        "issueDate": { "type": "string", "maxLength": 20 },
+        "dueDate": { "type": "string", "maxLength": 20 },
+        "status": {
+          "type": "string",
+          "enum": ["Draft", "Issued", "Paid", "Overdue"]
+        },
+        "notes": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["invoiceNumber", "customerName", "garmentTitle", "total", "issueDate", "dueDate", "status"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorised studio manager or owner account",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 120 },
+        "role": { "type": "string", "enum": ["owner", "admin"] },
+        "name": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/enquiries/{enquiryId}": {
+      "schema": "#/entities/Enquiry",
+      "description": "Customer booking and bespoke garment enquiries"
+    },
+    "/customers/{customerId}": {
+      "schema": "#/entities/Customer",
+      "description": "Customer registry with measurements and occasion histories"
+    },
+    "/orders/{orderId}": {
+      "schema": "#/entities/Order",
+      "description": "Active and completed bespoke orders tracking across workflow stages"
+    },
+    "/appointments/{appointmentId}": {
+      "schema": "#/entities/Appointment",
+      "description": "Consultation and fitting appointments"
+    },
+    "/invoices/{invoiceId}": {
+      "schema": "#/entities/Invoice",
+      "description": "Boutique billing invoices and deposit records"
+    },
+    "/admins/{adminId}": {
+      "schema": "#/entities/AdminUser",
+      "description": "Authorized administrative accounts"
+    }
+  }
+}

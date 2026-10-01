@@ -1,0 +1,144 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net: Default-deny all unlisted paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Reusable Global Primitives & Helpers
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    // Bootstrapped Admin: daneen4tune2@gmail.com
+    function isBootstrappedAdmin() {
+      return isSignedIn() && request.auth.token.email == 'daneen4tune2@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // 3. Validation Helpers
+    function isValidEnquiry(data) {
+      return data.customerName is string && data.customerName.size() <= 100 &&
+             data.phone is string && data.phone.size() <= 30 &&
+             data.occasion is string && data.occasion.size() <= 50 &&
+             data.eventDate is string && data.eventDate.size() <= 20 &&
+             data.serviceCategory is string && data.serviceCategory.size() <= 50 &&
+             data.garmentDescription is string && data.garmentDescription.size() <= 1500 &&
+             data.status in ['New', 'Reviewed', 'Accepted', 'Archived'];
+    }
+
+    function isValidCustomer(data) {
+      return data.name is string && data.name.size() <= 100 &&
+             data.phone is string && data.phone.size() <= 30 &&
+             data.occasion is string && data.occasion.size() <= 50 &&
+             data.eventDate is string && data.eventDate.size() <= 20;
+    }
+
+    function isValidOrder(data) {
+      return data.orderNumber is string && data.orderNumber.size() <= 40 &&
+             data.customerId is string && data.customerId.size() <= 128 &&
+             data.customerName is string && data.customerName.size() <= 100 &&
+             data.serviceCategory is string && data.serviceCategory.size() <= 50 &&
+             data.garmentTitle is string && data.garmentTitle.size() <= 150 &&
+             data.status in [
+               'New Enquiry', 'Consultation', 'Booking Confirmed',
+               'Fabric Received', 'Fitting', 'In Production', 'Final Fitting', 'Completed'
+             ];
+    }
+
+    function isValidAppointment(data) {
+      return data.customerName is string && data.customerName.size() <= 100 &&
+             data.type is string && data.type.size() <= 60 &&
+             data.date is string && data.date.size() <= 20 &&
+             data.time is string && data.time.size() <= 10 &&
+             data.status in ['Requested', 'Confirmed', 'Completed', 'Rescheduled', 'Cancelled'];
+    }
+
+    function isValidInvoice(data) {
+      return data.invoiceNumber is string && data.invoiceNumber.size() <= 40 &&
+             data.customerName is string && data.customerName.size() <= 100 &&
+             data.garmentTitle is string && data.garmentTitle.size() <= 150 &&
+             data.total is number && data.total >= 0 &&
+             data.issueDate is string && data.issueDate.size() <= 20 &&
+             data.dueDate is string && data.dueDate.size() <= 20 &&
+             data.status in ['Draft', 'Issued', 'Paid', 'Overdue'];
+    }
+
+    // 4. Collection Match Blocks
+
+    // Admins Collection
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow list: if isAdmin();
+      allow write: if isBootstrappedAdmin();
+    }
+
+    // Enquiries Collection
+    match /enquiries/{enquiryId} {
+      allow get: if isValidId(enquiryId) && (isAdmin() || (isSignedIn() && existing().email == request.auth.token.email));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.email == request.auth.token.email);
+      allow create: if isValidId(enquiryId) && isValidEnquiry(incoming());
+      allow update: if isValidId(enquiryId) && isAdmin() && isValidEnquiry(incoming());
+      allow delete: if isValidId(enquiryId) && isAdmin();
+    }
+
+    // Customers Collection (Contains sensitive measurements & contact info)
+    match /customers/{customerId} {
+      allow get: if isValidId(customerId) && (isAdmin() || (isSignedIn() && existing().email == request.auth.token.email));
+      allow list: if isAdmin();
+      allow create: if isValidId(customerId) && (isAdmin() || isValidCustomer(incoming()));
+      allow update: if isValidId(customerId) && isAdmin() && isValidCustomer(incoming());
+      allow delete: if isValidId(customerId) && isAdmin();
+    }
+
+    // Orders Collection
+    match /orders/{orderId} {
+      allow get: if isValidId(orderId) && (isAdmin() || (isSignedIn() && existing().customerEmail == request.auth.token.email));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.customerEmail == request.auth.token.email);
+      allow create: if isValidId(orderId) && (isAdmin() || isValidOrder(incoming()));
+      allow update: if isValidId(orderId) && isAdmin() && isValidOrder(incoming());
+      allow delete: if isValidId(orderId) && isAdmin();
+    }
+
+    // Appointments Collection
+    match /appointments/{appointmentId} {
+      allow get: if isValidId(appointmentId) && (isAdmin() || isSignedIn());
+      allow list: if isAdmin() || isSignedIn();
+      allow create: if isValidId(appointmentId) && isValidAppointment(incoming());
+      allow update: if isValidId(appointmentId) && (isAdmin() || (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'date', 'time'])));
+      allow delete: if isValidId(appointmentId) && isAdmin();
+    }
+
+    // Invoices Collection
+    match /invoices/{invoiceId} {
+      allow get: if isValidId(invoiceId) && (isAdmin() || (isSignedIn() && existing().customerEmail == request.auth.token.email));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.customerEmail == request.auth.token.email);
+      allow create: if isValidId(invoiceId) && isAdmin() && isValidInvoice(incoming());
+      allow update: if isValidId(invoiceId) && isAdmin() && isValidInvoice(incoming());
+      allow delete: if isValidId(invoiceId) && isAdmin();
+    }
+  }
+}

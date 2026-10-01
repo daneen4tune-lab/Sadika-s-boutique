@@ -1,0 +1,6 @@
+{
+  "name": "Sadika's Bridal Boutique - Bespoke Couture & Atelier Management",
+  "description": "Bespoke bridal, evening wear, alterations, automated invoicing, and AI styling concierge for Sadika's Bridal Boutique owned by Sadika Karbary.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
